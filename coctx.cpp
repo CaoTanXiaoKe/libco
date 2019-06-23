@@ -114,14 +114,16 @@ int coctx_make( coctx_t *ctx,coctx_pfn_t pfn,const void *s,const void *s1 )
 #elif defined(__x86_64__)
 int coctx_make( coctx_t *ctx,coctx_pfn_t pfn,const void *s,const void *s1 )
 {
+	// sp 指向该协程栈的底部
 	char *sp = ctx->ss_sp + ctx->ss_size;
+	// 字节对齐
 	sp = (char*) ((unsigned long)sp & -16LL  );
 
 	memset(ctx->regs, 0, sizeof(ctx->regs));
 
-	ctx->regs[ kRSP ] = sp - 8;
+	ctx->regs[ kRSP ] = sp - 8;	// %rsp 指向协程栈的第一个位置
 
-	ctx->regs[ kRETAddr] = (char*)pfn;
+	ctx->regs[ kRETAddr] = (char*)pfn;	// 指向返回地址，即PC寄存器的值。
 
 	ctx->regs[ kRDI ] = (char*)s;
 	ctx->regs[ kRSI ] = (char*)s1;

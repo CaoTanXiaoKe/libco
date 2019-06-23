@@ -22,15 +22,19 @@
 #include <queue>
 #include "co_routine.h"
 using namespace std;
+
 struct stTask_t
 {
 	int id;
 };
+
 struct stEnv_t
 {
 	stCoCond_t* cond;
 	queue<stTask_t*> task_queue;
 };
+
+
 void* Producer(void* args)
 {
 	co_enable_hook_sys();
@@ -47,6 +51,7 @@ void* Producer(void* args)
 	}
 	return NULL;
 }
+
 void* Consumer(void* args)
 {
 	co_enable_hook_sys();
@@ -65,19 +70,25 @@ void* Consumer(void* args)
 	}
 	return NULL;
 }
+
 int main()
 {
 	stEnv_t* env = new stEnv_t;
 	env->cond = co_cond_alloc();
 
 	stCoRoutine_t* consumer_routine;
+	// 第一次执行 co_create，初始化 stCoRoutineEnv_t(每个线程只有一个，记录协程的调用链)
+	// 把当前协程push进 stCoRoutineEnv_t的调用栈中。
+	// 然后创建一个协程控制块stCoRoutine_t，通过co_create的第一个参数把结果返回。
 	co_create(&consumer_routine, NULL, Consumer, env);
+	
 	co_resume(consumer_routine);
 
 	stCoRoutine_t* producer_routine;
 	co_create(&producer_routine, NULL, Producer, env);
 	co_resume(producer_routine);
 	
+	// 等待定时事件，条件变量事件就绪
 	co_eventloop(co_get_epoll_ct(), NULL, NULL);
 	return 0;
 }

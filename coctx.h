@@ -30,13 +30,16 @@ struct coctx_t
 #if defined(__i386__)
 	void *regs[ 8 ];
 #else
-	void *regs[ 14 ];
+	void *regs[ 14 ];	// 存储寄存器的值，用于上下文切换。
 #endif
-	size_t ss_size;
-	char *ss_sp;
+	size_t ss_size;	// 运行时栈大小。
+	char *ss_sp;	// 运行时栈 %rsp指向的位置。
 	
 };
 
+// 初始化运行时栈(置零)
 int coctx_init( coctx_t *ctx );
+
+// 
 int coctx_make( coctx_t *ctx,coctx_pfn_t pfn,const void *s,const void *s1 );
 #endif

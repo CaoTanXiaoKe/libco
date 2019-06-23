@@ -48,23 +48,44 @@ struct stShareStack_t
 
 struct stCoRoutine_t
 {
+	// 同属于一个线程，所有协程的执行上下文环境。
 	stCoRoutineEnv_t *env;
+
+	// 协程函数
 	pfn_co_routine_t pfn;
+
+	// 协程函数参数
 	void *arg;
+
+	// 协程上下文, 即协程切换时，用于保存寄存器的值。
 	coctx_t ctx;
 
+	// 标识协程是否已经开始被执行。
 	char cStart;
+
+	// 标识协程是否已经被执行结束。
 	char cEnd;
+
+	// 标识是否是第一个协程(通常为main函数)
 	char cIsMain;
+
+	// 是否开启了 socket簇函数的hook
 	char cEnableSysHook;
+
+	// 是否开启了共享栈模式。
 	char cIsShareStack;
 
+	// 指向进程的 env。
 	void *pvEnv;
 
-	//char sRunStack[ 1024 * 128 ];
+	// 运行时栈, 128k。
+	// char sRunStack[ 1024 * 128 ];
 	stStackMem_t* stack_mem;
 
 
+	// 由于运行时栈大小为 128k, 100万个协程，需要近 128G内存。为了节约内存，在共享栈模式下，
+	// 当协程上下文切换时，会把运行时栈存放到缓冲区内(只存栈实际占用的内存大小)。下面的缓冲区即
+	// 为了这个目的。
 	//save satck buffer while confilct on same stack_buffer;
 	char* stack_sp; 
 	unsigned int save_size;

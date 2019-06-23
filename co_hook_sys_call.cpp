@@ -586,6 +586,7 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	std::map<int, int> m;  // fd --> idx
 	std::map<int, int>::iterator it;
 	if (nfds > 1) {
+		// 把相同fd的事件，合并到一个fd上。
 		fds_merge = (pollfd *)malloc(sizeof(pollfd) * nfds);
 		for (size_t i = 0; i < nfds; i++) {
 			if ((it = m.find(fds[i].fd)) == m.end()) {
@@ -600,12 +601,14 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	}
 
 	int ret = 0;
+	// 如果没有进行相同fd的事件合并(之所以把nfds拎出来，因为mfds为1和0是最常见的情况，为了加快处理速度)
 	if (nfds_merge == nfds || nfds == 1) {
 		ret = co_poll_inner(co_get_epoll_ct(), fds, nfds, timeout, g_sys_poll_func);
 	} else {
 		ret = co_poll_inner(co_get_epoll_ct(), fds_merge, nfds_merge, timeout,
 				g_sys_poll_func);
-		if (ret > 0) {
+		if (ret > 0) {	// 有些 fd 准备就绪
+			// 返回所有注册fd的就绪事件(重复的fd，也各按各的注册事件返回)
 			for (size_t i = 0; i < nfds; i++) {
 				it = m.find(fds[i].fd);
 				if (it != m.end()) {
@@ -617,9 +620,9 @@ int poll(struct pollfd fds[], nfds_t nfds, int timeout)
 	}
 	free(fds_merge);
 	return ret;
-
-
 }
+
+
 int setsockopt(int fd, int level, int option_name,
 			                 const void *option_value, socklen_t option_len)
 {
