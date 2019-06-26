@@ -55,8 +55,8 @@ static int SetNonBlock(int iSock)
     int iFlags;
 
     iFlags = fcntl(iSock, F_GETFL, 0);
-    iFlags |= O_NONBLOCK;
-    iFlags |= O_NDELAY;
+    iFlags |= O_NONBLOCK;	//
+    iFlags |= O_NDELAY;	//
     int ret = fcntl(iSock, F_SETFL, iFlags);
     return ret;
 }
@@ -112,12 +112,12 @@ static void *accept_routine( void * )
 	for(;;)
 	{
 		//printf("pid %ld g_readwrite.size %ld\n",getpid(),g_readwrite.size());
-		if( g_readwrite.empty() )
+		if( g_readwrite.empty() )	// 空闲协程池为空
 		{
 			printf("empty\n"); //sleep
 			struct pollfd pf = { 0 };
 			pf.fd = -1;
-			poll( &pf,1,1000);
+			poll( &pf,1,1000);	// 等待任何fd就绪，或者
 
 			continue;
 
@@ -180,6 +180,7 @@ static int CreateTcpSocket(const unsigned short shPort /* = 0 */,const char *psz
 			if(bReuse)
 			{
 				int nReuseAddr = 1;
+				// 设置允许TIME_WAIT状态的端口，可以绑定。
 				setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&nReuseAddr,sizeof(nReuseAddr));
 			}
 			struct sockaddr_in addr ;
@@ -218,6 +219,7 @@ int main(int argc,char *argv[])
 	}
 	printf("listen %d %s:%d\n",g_listen_fd,ip,port);
 
+	// 设置监听套接字非阻塞。
 	SetNonBlock( g_listen_fd );
 
 	for(int k=0;k<proccnt;k++)
@@ -249,6 +251,7 @@ int main(int argc,char *argv[])
 
 		exit(0);
 	}
+	// 如果不后台运行，return 0. 该进程结束，其子进程成为孤儿进程，托管给 init进程。
 	if(!deamonize) wait(NULL);
 	return 0;
 }
