@@ -16,6 +16,8 @@
 * limitations under the License.
 */
 
+// 生产者-消费者
+
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
