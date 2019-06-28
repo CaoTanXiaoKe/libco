@@ -55,8 +55,8 @@ static int SetNonBlock(int iSock)
     int iFlags;
 
     iFlags = fcntl(iSock, F_GETFL, 0);
-    iFlags |= O_NONBLOCK;	//
-    iFlags |= O_NDELAY;	//
+    iFlags |= O_NONBLOCK;	// 设置fd非阻塞
+    iFlags |= O_NDELAY;	// 禁止 Nagle算法。及时应答，不要延迟发送。
     int ret = fcntl(iSock, F_SETFL, iFlags);
     return ret;
 }
@@ -117,7 +117,7 @@ static void *accept_routine( void * )
 			printf("empty\n"); //sleep
 			struct pollfd pf = { 0 };
 			pf.fd = -1;
-			poll( &pf,1,1000);	// 等待任何fd就绪，或者
+			poll( &pf,1,1000);	// 该协程让出线程，sleep 1s。
 
 			continue;
 
@@ -127,6 +127,7 @@ static void *accept_routine( void * )
 		socklen_t len = sizeof(addr);
 
 		int fd = co_accept(g_listen_fd, (struct sockaddr *)&addr, &len);
+		// 如果监听套接字不可读，该协程让出线程，sleep 1s。
 		if( fd < 0 )
 		{
 			struct pollfd pf = { 0 };
@@ -135,6 +136,8 @@ static void *accept_routine( void * )
 			co_poll( co_get_epoll_ct(),&pf,1,1000 );
 			continue;
 		}
+		
+		// What??? 仅仅是防御式编程? 上边的判断到此并没有发生协程上下文切换。
 		if( g_readwrite.empty() )
 		{
 			close( fd );

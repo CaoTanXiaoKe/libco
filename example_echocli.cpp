@@ -16,6 +16,8 @@
 * limitations under the License.
 */
 
+// 回射服务器的客户端
+
 #include "co_routine.h"
 
 #include <errno.h>
@@ -112,13 +114,14 @@ static void *readwrite_routine( void *arg )
 	{
 		if ( fd < 0 )
 		{
-			fd = socket(PF_INET, SOCK_STREAM, 0);
+			fd = socket(PF_INET, SOCK_STREAM, 0);	// socket 函数里返回的fd设置了非阻塞。 
 			struct sockaddr_in addr;
 			SetAddr(endpoint->ip, endpoint->port, addr);
 			ret = connect(fd,(struct sockaddr*)&addr,sizeof(addr));
 						
 			if ( errno == EALREADY || errno == EINPROGRESS )
-			{       
+			{    
+				// connect 文件描述符还没就绪(对端ACK未到达)，注册定时事件。
 				struct pollfd pf = { 0 };
 				pf.fd = fd;
 				pf.events = (POLLOUT|POLLERR|POLLHUP);
@@ -127,6 +130,7 @@ static void *readwrite_routine( void *arg )
 				int error = 0;
 				uint32_t socklen = sizeof(error);
 				errno = 0;
+				// 调用getsockopt出错
 				ret = getsockopt(fd, SOL_SOCKET, SO_ERROR,(void *)&error,  &socklen);
 				if ( ret == -1 ) 
 				{       
@@ -136,6 +140,7 @@ static void *readwrite_routine( void *arg )
 					AddFailCnt();
 					continue;
 				}       
+				// 链接出错
 				if ( error ) 
 				{       
 					errno = error;
@@ -189,6 +194,8 @@ int main(int argc,char *argv[])
 	
 	struct sigaction sa;
 	sa.sa_handler = SIG_IGN;
+	// 忽略SIGPIPE信号，防止连续写一个已经关闭的连接，会接收到SIGPIPE信号。
+	// 该信号默认行为是结束进程。
 	sigaction( SIGPIPE, &sa, NULL );
 	
 	for(int k=0;k<proccnt;k++)

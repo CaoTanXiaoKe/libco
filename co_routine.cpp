@@ -451,6 +451,7 @@ inline void TakeAllTimeout( stTimeout_t *apTimeout,unsigned long long allNow,stT
 	for( int i = 0;i<cnt;i++)
 	{
 		int idx = ( apTimeout->llStartIdx + i) % apTimeout->iItemSize;
+		// 把时间轮上的超时事件，全部移动到 apResult里。
 		Join<stTimeoutItem_t,stTimeoutItemLink_t>( apResult,apTimeout->pItems + idx  );
 	}
 	apTimeout->ullStart = allNow;
@@ -798,7 +799,7 @@ void co_eventloop( stCoEpoll_t *ctx,pfn_co_eventloop_t pfn,void *arg )
 		for(int i=0;i<ret;i++)
 		{
 			stTimeoutItem_t *item = (stTimeoutItem_t*)result->events[i].data.ptr;
-			// 如果注册了预处理函数，调用预处理函数(预处理函数中最终会把就绪事件添加到active链表)
+			// 如果注册了预处理函数，调用预处理函数(预处理函数中会把就绪事件从时间轮中删除，并且添加到active链表中)
 			if( item->pfnPrepare )
 			{
 				item->pfnPrepare( item,result->events[i],active );
@@ -810,8 +811,8 @@ void co_eventloop( stCoEpoll_t *ctx,pfn_co_eventloop_t pfn,void *arg )
 			}
 		}
 
-		// 从时间轮上取出已超时的事件，放到 timeout 链表(队列)。
 		unsigned long long now = GetTickMS();
+		// 从时间轮上取出已超时的事件，放到 timeout 链表(队列)。
 		TakeAllTimeout( ctx->pTimeout,now,timeout );
 
 		// 遍历 timeout 队列，设置事件已超时标志（bTimeout 设为 true）
@@ -823,7 +824,7 @@ void co_eventloop( stCoEpoll_t *ctx,pfn_co_eventloop_t pfn,void *arg )
 			lp = lp->pNext;
 		}
 
-		// 将 timeout 队列中事件合并到 active 队列。
+		// 将 timeout 队列中超时事件移动到 active 队列。
 		Join<stTimeoutItem_t,stTimeoutItemLink_t>( active,timeout );
 
 		// 遍历active链表，调用工作协程设置的 pfnProcess() 回调函数 resume 挂起的工作协程，
@@ -833,7 +834,7 @@ void co_eventloop( stCoEpoll_t *ctx,pfn_co_eventloop_t pfn,void *arg )
 		{
 
 			PopHead<stTimeoutItem_t,stTimeoutItemLink_t>( active );
-			// What???
+			// 如果是定时事件就绪，并且还没达到实际定时的时间。(添加超时的长度超过时间轮长度)
             if (lp->bTimeout && now < lp->ullExpireTime) 
 			{
 				int ret = AddTimeout(ctx->pTimeout, lp, now);
@@ -994,6 +995,7 @@ int co_poll_inner( stCoEpoll_t *ctx,struct pollfd fds[], nfds_t nfds, int timeou
 		iRaiseCnt = arg.iRaiseCnt;
 	}
 
+	// 添加 epoll事件失败，或者超时: 删除添加的epoll事件，释放分配的相关内存。
     {
 		//clear epoll status and memory
 		RemoveFromLink<stTimeoutItem_t,stTimeoutItemLink_t>( &arg );

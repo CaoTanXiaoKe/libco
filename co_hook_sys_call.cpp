@@ -265,11 +265,13 @@ int connect(int fd, const struct sockaddr *address, socklen_t address_len)
 	{
 		 memcpy( &(lp->dest),address,(int)address_len );
 	}
+	// 如果调用者(用户应用代码，非libco库本身)设置了非阻塞，直接返回。
 	if( O_NONBLOCK & lp->user_flag ) 
 	{
 		return ret;
 	}
 	
+	// 如果不是connect未就绪，是其他错误。
 	if (!(ret < 0 && errno == EINPROGRESS))
 	{
 		return ret;
