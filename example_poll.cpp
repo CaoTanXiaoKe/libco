@@ -132,21 +132,30 @@ static void *poll_routine( void *arg )
 	size_t iWaitCnt = v.size();
 	for(;;)
 	{
+		// 等到这些connect文件描述符就绪(可写)
 		int ret = poll( pf,iWaitCnt,1000 );
 		printf("co %p poll wait %ld ret %d\n",
 				co_self(),iWaitCnt,ret);
+		int nready = ret; 
 		for(int i=0;i<(int)iWaitCnt;i++)
 		{
-			printf("co %p fire fd %d revents 0x%X POLLOUT 0x%X POLLERR 0x%X POLLHUP 0x%X\n",
+			if ( nready <= 0 )
+				break;
+			if (pf[i].revents & (POLLOUT | POLLERR | POLLHUP))
+			{
+				printf("co %p fire fd %d revents 0x%X POLLOUT 0x%X POLLERR 0x%X POLLHUP 0x%X\n",
 					co_self(),
 					pf[i].fd,
 					pf[i].revents,
-					POLLOUT,
-					POLLERR,
-					POLLHUP
+					pf[i].revents | POLLOUT,
+					pf[i].revents | POLLERR,
+					pf[i].revents | POLLHUP
 					);
-			setRaiseFds.insert( pf[i].fd );
+				setRaiseFds.insert( pf[i].fd );
+				nready--;
+			}
 		}
+		// 注册进poll的描述符，已全部就绪。
 		if( setRaiseFds.size() == v.size())
 		{
 			break;
@@ -156,6 +165,7 @@ static void *poll_routine( void *arg )
 			break;
 		}
 
+		// 重新使用 poll 监听未就绪的文件描述符。
 		iWaitCnt = 0;
 		for(size_t i=0;i<v.size();i++)
 		{
@@ -177,6 +187,7 @@ static void *poll_routine( void *arg )
 			co_self(),v.size(),setRaiseFds.size() );
 	return 0;
 }
+
 int main(int argc,char *argv[])
 {
 	vector<task_t> v;
