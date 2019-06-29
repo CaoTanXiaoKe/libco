@@ -147,9 +147,9 @@ static void *poll_routine( void *arg )
 					co_self(),
 					pf[i].fd,
 					pf[i].revents,
-					pf[i].revents | POLLOUT,
-					pf[i].revents | POLLERR,
-					pf[i].revents | POLLHUP
+					POLLOUT,
+					POLLERR,
+					POLLHUP
 					);
 				setRaiseFds.insert( pf[i].fd );
 				nready--;
@@ -160,7 +160,7 @@ static void *poll_routine( void *arg )
 		{
 			break;
 		}
-		if( ret <= 0 )
+		if( ret < 0 )
 		{
 			break;
 		}
@@ -201,6 +201,7 @@ int main(int argc,char *argv[])
 //------------------------------------------------------------------------------------
 	printf("--------------------- main -------------------\n");
 	vector<task_t> v2 = v;
+	// 由于主协程是协程调用链第一个元素，co_enable_hook_sys() 不生效。
 	poll_routine( &v2 );
 	printf("--------------------- routine -------------------\n");
 
