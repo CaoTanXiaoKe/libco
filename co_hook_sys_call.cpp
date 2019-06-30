@@ -783,14 +783,18 @@ void co_set_env_list( const char *name[],size_t cnt)
 	{
 		if( name[i] && name[i][0] )
 		{
+			// 拷贝复制一份 name[i], 放到 g_co_sysenv里。
 			g_co_sysenv.data[ g_co_sysenv.cnt++ ].name = strdup( name[i] );
 		}
 	}
 	if( g_co_sysenv.cnt > 1 )
 	{
+		// 环境变量按照键(name)排序。
 		qsort( g_co_sysenv.data,g_co_sysenv.cnt,sizeof(stCoSysEnv_t),co_sysenv_comp );
 		stCoSysEnv_t *lp = g_co_sysenv.data;
 		stCoSysEnv_t *lq = g_co_sysenv.data + 1;
+		
+		// 去重
 		for(size_t i=1;i<g_co_sysenv.cnt;i++)
 		{
 			if( strcmp( lp->name,lq->name ) )

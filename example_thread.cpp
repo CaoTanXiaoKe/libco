@@ -34,6 +34,7 @@ int loop(void *)
 static void *routine_func( void * )
 {
 	stCoEpoll_t * ev = co_get_epoll_ct(); //ct = current thread
+	// co_epoll_wait超时时间是 1ms, 在这 1ms的阻塞时间里，会发生线程上下文切换。
 	co_eventloop( ev,loop,0 );
 	return 0;
 }

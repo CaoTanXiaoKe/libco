@@ -40,6 +40,8 @@
 
 using namespace std;
 
+// 演示 poll的用法和行为。
+
 struct task_t
 {
 	stCoRoutine_t *co;

@@ -41,6 +41,8 @@ void SetAndGetEnv(int iRoutineID)
 
 	char sBuf[128];
 	sprintf(sBuf, "cgi_routine_%d", iRoutineID);
+	// 第一次调用setenv时，协程copy一份线程全局的环境变量到自己的协程空间中。
+	// 后续只能对这些键的值进行更改。
 	int ret = setenv("CGINAME", sBuf, 1);
 	if (ret)
 	{
@@ -74,6 +76,7 @@ void* RoutineFunc(void* args)
 
 int main(int argc, char* argv[])
 {
+	// 先定义好该线程的协程都有哪些环境变量。
 	co_set_env_list(CGI_ENV_HOOK_LIST, sizeof(CGI_ENV_HOOK_LIST) / sizeof(char*));
 	stRoutineArgs_t  args[3];
 	for (int i = 0; i < 3; i++)
